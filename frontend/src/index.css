@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+/* ─── Design Tokens ─────────────────────────────────── */
+:root {
+  --color-primary: #1e293b;
+  --color-secondary: #334155;
+  --color-accent: #3b82f6;
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  
+  --color-sidebar-bg: #1e293b;
+  --color-sidebar-text: #ffffff;
+  --color-sidebar-hover: #334155;
+  --color-sidebar-active: #3b82f6;
+  
+  --color-button-bg: #3b82f6;
+  --color-button-hover: #2563eb;
+  --color-button-border: #3b82f6;
+  --color-button-text: #ffffff;
+}
+
+@theme {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+
+  --color-sidebar-bg: var(--color-sidebar-bg);
+  --color-sidebar-text: var(--color-sidebar-text);
+  --color-sidebar-hover: var(--color-sidebar-hover);
+  --color-sidebar-active: var(--color-sidebar-active);
+
+  --color-button-bg: var(--color-button-bg);
+  --color-button-hover: var(--color-button-hover);
+  --color-button-border: var(--color-button-border);
+  --color-button-text: var(--color-button-text);
+}
+
+/* ─── Typography ─────────────────────────────────────── */
+/* Base: 14px — Tailwind scale remains relative.
+   To adjust independently:
+     Body/table/form text → font-size here (14px)
+     Titles              → .text-lg / .text-xl / .text-2xl (Tailwind)
+     Buttons             → .text-sm in component classes
+     Labels/badges       → .text-xs in component classes       */
+body {
+  font-size: 14px;
+  line-height: 1.5;
+}

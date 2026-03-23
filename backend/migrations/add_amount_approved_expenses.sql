@@ -1,0 +1,1 @@
+ALTER TABLE expenses ADD COLUMN amount_approved DECIMAL(10,2) DEFAULT NULL AFTER amount;
