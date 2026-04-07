@@ -110,7 +110,7 @@ INSERT INTO app_settings (setting_key, setting_value, description, updated_at) V
 ('button_hover_color', '#2563eb', NULL, '2026-02-26 23:33:50'),
 ('button_text_color', '#ffffff', NULL, '2026-02-26 23:33:50'),
 ('DIRECTOR_USER_IDS', '[1, 35]', NULL, '2026-02-27 05:05:10'),
-('logo_url', '/uploads/logo-1774365676590-207457570.png', NULL, '2026-03-24 15:21:16'),
+('logo_url', '/uploads/logo-1775573367647-218753969.png', NULL, '2026-04-07 14:49:27'),
 ('primary_color', '#545454', NULL, '2026-02-26 13:24:57'),
 ('secondary_color', '#e87d26', NULL, '2026-02-26 13:25:52'),
 ('sidebar_active_color', '#f49e57', NULL, '2026-02-27 00:44:55'),
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS users (
     );
 TRUNCATE TABLE users;
 INSERT INTO users (id, name, email, password_hash, role_old, reports_to, created_at, updated_at, department_id, password, active, role_id, role) VALUES 
-(1, 'Admin User', 'hgonzalez@induwell.com', 'password123', 'Admin', NULL, '2026-02-16 05:13:52', '2026-03-10 15:43:09', 1, 'password123', 1, 1, 'Admin'),
+(1, 'Admin User', 'hgonzalez@induwell.com', 'hgonzalez', 'Admin', NULL, '2026-02-16 05:13:52', '2026-04-07 14:48:36', 1, 'password123', 1, 1, 'Admin'),
 (44, 'Carlos Vega Cabanas', 'director@test.com', 'director', 'Employee', NULL, '2026-03-10 15:44:08', '2026-03-10 15:44:08', 1, NULL, 1, 7, 'Employee'),
 (45, 'Brenda Santos', 'cajero@test.com', 'cajero', 'Employee', NULL, '2026-03-10 15:45:34', '2026-03-10 15:45:34', 1, NULL, 1, 4, 'Employee'),
 (46, 'Ricardo Barranco', 'j1@test.com', 'j1', 'Employee', NULL, '2026-03-10 15:46:36', '2026-03-10 15:46:36', 2, NULL, 1, 2, 'Employee'),
