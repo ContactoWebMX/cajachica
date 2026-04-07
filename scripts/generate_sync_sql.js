@@ -1,95 +1,26 @@
 const db = require('../backend/config/db');
 const fs = require('fs');
 
-const dumpTables = [
-    'roles',
-    'departments',
-    'cost_centers',
-    'expense_categories',
-    'projects',
-    'companies',
-    'app_settings',
-    'users'
-];
-
-const tableDefinitions = {
-    roles: `CREATE TABLE IF NOT EXISTS roles (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(50) NOT NULL UNIQUE,
-        description VARCHAR(255),
-        active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );`,
-    departments: `CREATE TABLE IF NOT EXISTS departments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL UNIQUE,
-        cost_center_id INT,
-        active BOOLEAN DEFAULT TRUE
-    );`,
-    cost_centers: `CREATE TABLE IF NOT EXISTS cost_centers (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        code VARCHAR(50) NOT NULL UNIQUE,
-        name VARCHAR(100) NOT NULL,
-        active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );`,
-    expense_categories: `CREATE TABLE IF NOT EXISTS expense_categories (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL UNIQUE,
-        description TEXT,
-        active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );`,
-    projects: `CREATE TABLE IF NOT EXISTS projects (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL UNIQUE,
-        description TEXT,
-        active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );`,
-    companies: `CREATE TABLE IF NOT EXISTS companies (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        rfc VARCHAR(20),
-        description TEXT,
-        active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );`,
-    app_settings: `CREATE TABLE IF NOT EXISTS app_settings (
-        setting_key VARCHAR(50) PRIMARY KEY,
-        setting_value TEXT NOT NULL,
-        description VARCHAR(255),
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    );`,
-    users: `CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL UNIQUE,
-        password_hash VARCHAR(255),
-        password VARCHAR(255),
-        role VARCHAR(50),
-        role_old VARCHAR(50),
-        role_id INT,
-        department_id INT,
-        reports_to INT,
-        active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    );`
-};
-
-async function generateDump() {
-    let sqlOutput = "-- FULL CPANEL SYNC SCRIPT --\n";
-    sqlOutput += "-- Generado para corregir errores de tablas faltantes y sincronizar datos de prueba --\n\n";
+async function generateFullDump() {
+    let sqlOutput = "-- FULL CPANEL SYNC SCRIPT (DYNAMIC) --\n";
+    sqlOutput += "-- Generado para sincronizar TODA la información actual de la base de datos local --\n\n";
     sqlOutput += "SET FOREIGN_KEY_CHECKS = 0;\n\n";
 
-    for (const table of dumpTables) {
-        try {
-            sqlOutput += `-- TABLE: ${table} --\n`;
-            if (tableDefinitions[table]) {
-                sqlOutput += `${tableDefinitions[table]}\n`;
-            }
+    try {
+        // Get all tables
+        const [tables] = await db.query("SHOW TABLES");
+        const dbName = 'Tables_in_induwell_cloud_cash'; // Note: might vary depending on DB name, but usually it's this pattern
+        const tableList = tables.map(t => Object.values(t)[0]);
 
+        for (const table of tableList) {
+            console.log(`Dumping table: ${table}...`);
+            sqlOutput += `-- TABLE: ${table} --\n`;
+
+            // Get Create Table info
+            const [createTable] = await db.query(`SHOW CREATE TABLE ${table}`);
+            sqlOutput += `${createTable[0]['Create Table']};\n`;
+
+            // Get data
             const [rows] = await db.query(`SELECT * FROM ${table}`);
             if (rows.length > 0) {
                 sqlOutput += `TRUNCATE TABLE ${table};\n`;
@@ -97,31 +28,41 @@ async function generateDump() {
                 const columns = Object.keys(rows[0]);
                 const columnNames = columns.join(', ');
 
-                const values = rows.map(row => {
+                // Chunk processed to avoid string length limits if tables are huge
+                const valueChunks = [];
+                for (const row of rows) {
                     const rowValues = columns.map(col => {
                         const val = row[col];
                         if (val === null) return 'NULL';
+                        if (val instanceof Buffer) return `0x${val.toString('hex')}`;
                         if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
-                        if (val instanceof Date) return `'${val.toISOString().slice(0, 19).replace('T', ' ')}'`;
+                        if (val instanceof Date) {
+                            try {
+                                return `'${val.toISOString().slice(0, 19).replace('T', ' ')}'`;
+                            } catch (e) {
+                                return 'NULL';
+                            }
+                        }
                         if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'`;
                         return val;
                     });
-                    return `(${rowValues.join(', ')})`;
-                });
+                    valueChunks.push(`(${rowValues.join(', ')})`);
+                }
 
-                sqlOutput += `INSERT INTO ${table} (${columnNames}) VALUES \n${values.join(',\n')};\n\n`;
+                sqlOutput += `INSERT INTO ${table} (${columnNames}) VALUES \n${valueChunks.join(',\n')};\n\n`;
             } else {
-                sqlOutput += `-- No data found in ${table}, only structure generated.\n\n`;
+                sqlOutput += `-- No data found in ${table}.\n\n`;
             }
-        } catch (e) {
-            console.error(`Error dumping ${table}:`, e.message);
         }
-    }
 
-    sqlOutput += "SET FOREIGN_KEY_CHECKS = 1;\n";
-    fs.writeFileSync('full_sync_cpanel.sql', sqlOutput);
-    console.log('Script generado con éxito: full_sync_cpanel.sql');
-    process.exit(0);
+        sqlOutput += "SET FOREIGN_KEY_CHECKS = 1;\n";
+        fs.writeFileSync('full_sync_cpanel.sql', sqlOutput);
+        console.log('Script generado con éxito: full_sync_cpanel.sql (con todas las tablas)');
+    } catch (error) {
+        console.error('Fatal Error during dump generation:', error);
+    } finally {
+        process.exit(0);
+    }
 }
 
-generateDump();
+generateFullDump();
