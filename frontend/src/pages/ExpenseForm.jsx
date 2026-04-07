@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { BASE_URL } from '../services/api';
 import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
 import { Camera, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -101,7 +101,7 @@ const ExpenseForm = () => {
                 });
                 setSelectedUserId(expense.user_id);
                 if (expense.file_path) {
-                    setPreview(`http://localhost:3000/${expense.file_path}`);
+                    setPreview(`${BASE_URL}/${expense.file_path}`);
                 }
 
                 // Fetch advances for THIS user to populate dropdown correctly

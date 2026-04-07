@@ -2,6 +2,7 @@ import React from 'react';
 import { X, FileText, Calendar, DollarSign, User, Tag, MapPin, Hash, Building, Edit2, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency, formatDateTime, txId } from '../utils/format';
+import { BASE_URL } from '../services/api';
 
 const TransactionDetailModal = ({ isOpen, onClose, item, type, onApprove, onReject }) => {
     const navigate = useNavigate();
@@ -214,7 +215,7 @@ const TransactionDetailModal = ({ isOpen, onClose, item, type, onApprove, onReje
                                     <div className="flex justify-between items-center mb-4">
                                         <h4 className="font-bold text-slate-700 text-lg flex items-center gap-2"><FileText size={20} /> Comprobante Escaneado</h4>
                                         <a
-                                            href={`http://localhost:3000/${item.file_path}`}
+                                            href={`${BASE_URL}/${item.file_path}`}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="px-4 py-2 bg-white text-blue-600 rounded-xl hover:bg-blue-50 border border-slate-200 shadow-sm text-sm font-semibold transition-all"
@@ -224,7 +225,7 @@ const TransactionDetailModal = ({ isOpen, onClose, item, type, onApprove, onReje
                                     </div>
                                     <div className="bg-white p-2 rounded-2xl shadow-md border border-slate-200 flex-1 flex items-center justify-center min-h-[400px]">
                                         <img
-                                            src={`http://localhost:3000/${item.file_path}`}
+                                            src={`${BASE_URL}/${item.file_path}`}
                                             alt="Comprobante"
                                             className="max-w-full max-h-full object-contain rounded-xl"
                                         />

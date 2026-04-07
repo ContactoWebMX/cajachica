@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Home, PlusCircle, DollarSign, FileText, Activity, Users, Layers, CheckCircle, LogOut, List } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { BASE_URL } from '../services/api';
 
 const Layout = ({ user, onLogout }) => {
     const location = useLocation();
@@ -40,7 +41,7 @@ const Layout = ({ user, onLogout }) => {
     // Let's assume vite config proxies /uploads to backend.
 
     // Fallback logo if null
-    const logoSrc = settings.logo_url ? `http://localhost:3000${settings.logo_url}` : null;
+    const logoSrc = settings.logo_url ? `${BASE_URL}${settings.logo_url}` : null;
 
     return (
         <div className="min-h-screen bg-gray-50 flex">

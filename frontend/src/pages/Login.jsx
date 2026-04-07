@@ -13,7 +13,7 @@ const Login = ({ onLogin }) => {
     const [loading, setLoading] = useState(false);
 
     // Dynamic Logo
-    const logoSrc = settings.logo_url ? `http://localhost:3000${settings.logo_url}` : null;
+    const logoSrc = settings.logo_url ? `${import.meta.env.VITE_API_URL || '/api'}${settings.logo_url}` : null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();

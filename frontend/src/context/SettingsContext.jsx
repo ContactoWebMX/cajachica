@@ -7,19 +7,19 @@ export const useSettings = () => useContext(SettingsContext);
 
 export const SettingsProvider = ({ children }) => {
     const [settings, setSettings] = useState({
-        app_name: 'Induwell Cloud-Cash',
+        app_name: 'Induwell Caja Chica',
         logo_url: null,
-        primary_color: '#1e293b',
-        secondary_color: '#334155',
+        primary_color: '#404040',
+        secondary_color: '#525252',
         accent_color: '#3b82f6',
-        sidebar_bg_color: '#1e293b',
+        sidebar_bg_color: '#404040',
         sidebar_text_color: '#ffffff',
-        sidebar_hover_color: '#334155',
+        sidebar_hover_color: '#525252',
         sidebar_active_color: '#3b82f6',
-        button_bg_color: '#3b82f6',
+        button_bg_color: '#525252',
         button_text_color: '#ffffff',
-        button_hover_color: '#2563eb',
-        button_border_color: '#3b82f6',
+        button_hover_color: '#404040',
+        button_border_color: '#525252',
     });
     const [loading, setLoading] = useState(true);
 

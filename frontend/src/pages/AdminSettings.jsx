@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { BASE_URL } from '../services/api';
 import { useSettings } from '../context/SettingsContext';
 import { Palette, Mail, Upload, Save, CheckCircle, Shield } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -64,7 +64,7 @@ const AdminSettings = () => {
             logo: null
         });
         if (globalSettings.logo_url) {
-            setPreviewLogo(`http://localhost:3000${globalSettings.logo_url}`);
+            setPreviewLogo(`${BASE_URL}${globalSettings.logo_url}`);
         }
 
         // Fetch SMTP and Approval settings
