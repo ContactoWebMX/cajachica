@@ -4,6 +4,7 @@
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- TABLE: advances --
+DROP TABLE IF EXISTS advances;
 CREATE TABLE `advances` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -35,12 +36,14 @@ CREATE TABLE `advances` (
   CONSTRAINT `fk_advances_cc` FOREIGN KEY (`cost_center_id`) REFERENCES `cost_centers` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_advances_dept` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE SET NULL,
   CONSTRAINT `fk_advances_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 TRUNCATE TABLE advances;
 INSERT INTO advances (id, user_id, type, amount_requested, amount_approved, status, request_date, action_date, notes, project, rejection_reason, approver_name, project_id, category_id, cost_center_id, department_id, company_id) VALUES 
-(1, 49, 'Adelanto', '500.00', '500.00', 'Pagado', '2026-03-13 04:00:58', '2026-03-13 04:08:04', 'Aprobado/Pagado desde Dashboard', NULL, NULL, 'Carlos Vega Cabanas', 2, 4, 3, 1, 4);
+(1, 49, 'Adelanto', '500.00', '500.00', 'Pagado', '2026-03-13 04:00:58', '2026-03-13 04:08:04', 'Aprobado/Pagado desde Dashboard', NULL, NULL, 'Carlos Vega Cabanas', 2, 4, 3, 1, 4),
+(2, 50, 'Adelanto', '500.00', '500.00', 'Pagado', '2026-04-07 19:41:06', '2026-04-07 19:47:08', 'Aprobado/Pagado desde Dashboard', NULL, NULL, 'Carlos Vega Cabanas', 1, 1, 2, 3, 2);
 
 -- TABLE: app_settings --
+DROP TABLE IF EXISTS app_settings;
 CREATE TABLE `app_settings` (
   `setting_key` varchar(50) NOT NULL,
   `setting_value` varchar(255) NOT NULL,
@@ -67,6 +70,7 @@ INSERT INTO app_settings (setting_key, setting_value, description, updated_at) V
 ('sidebar_text_color', '#1f1f1f', NULL, '2026-02-26 23:47:35');
 
 -- TABLE: cash_flows --
+DROP TABLE IF EXISTS cash_flows;
 CREATE TABLE `cash_flows` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `type` enum('monto_inicial','reembolso','gasto','anticipo','ingreso') NOT NULL,
@@ -78,12 +82,14 @@ CREATE TABLE `cash_flows` (
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `cash_flows_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 TRUNCATE TABLE cash_flows;
 INSERT INTO cash_flows (id, type, amount, description, user_id, reference_id, date) VALUES 
-(1, 'ingreso', '10000.00', 'Ingreso de prueba', 45, NULL, '2026-03-13 03:54:43');
+(1, 'ingreso', '10000.00', 'Ingreso de prueba', 45, NULL, '2026-03-13 03:54:43'),
+(2, 'ingreso', '1000.00', 'Prueba', 1, NULL, '2026-04-07 19:39:31');
 
 -- TABLE: companies --
+DROP TABLE IF EXISTS companies;
 CREATE TABLE `companies` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(150) NOT NULL,
@@ -102,6 +108,7 @@ INSERT INTO companies (id, name, rfc, description, active, created_at) VALUES
 (4, 'ASI', 'ASI', 'ASI', 1, '2026-03-10 15:33:23');
 
 -- TABLE: cost_centers --
+DROP TABLE IF EXISTS cost_centers;
 CREATE TABLE `cost_centers` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `code` varchar(50) NOT NULL,
@@ -118,6 +125,7 @@ INSERT INTO cost_centers (id, code, name, active, created_at) VALUES
 (3, '90000', 'Finanzas', 1, '2026-03-10 15:41:30');
 
 -- TABLE: custom_fields --
+DROP TABLE IF EXISTS custom_fields;
 CREATE TABLE `custom_fields` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,
@@ -131,6 +139,7 @@ CREATE TABLE `custom_fields` (
 -- No data found in custom_fields.
 
 -- TABLE: departments --
+DROP TABLE IF EXISTS departments;
 CREATE TABLE `departments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -148,6 +157,7 @@ INSERT INTO departments (id, name, cost_center_id, active) VALUES
 (3, 'Logistica', 2, 1);
 
 -- TABLE: expense_categories --
+DROP TABLE IF EXISTS expense_categories;
 CREATE TABLE `expense_categories` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -165,6 +175,7 @@ INSERT INTO expense_categories (id, name, description, active, created_at) VALUE
 (4, 'Insumos', 'Insumos', 1, '2026-03-10 15:40:57');
 
 -- TABLE: expenses --
+DROP TABLE IF EXISTS expenses;
 CREATE TABLE `expenses` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -209,15 +220,17 @@ CREATE TABLE `expenses` (
   CONSTRAINT `expenses_ibfk_6` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),
   CONSTRAINT `expenses_ibfk_7` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`),
   CONSTRAINT `fk_expenses_project` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE SET NULL
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 TRUNCATE TABLE expenses;
 INSERT INTO expenses (id, user_id, amount, amount_approved, description, date, status, custom_data, file_path, file_hash, rejection_reason, approved_by, created_at, updated_at, advance_id, rfc, folio, geo_lat, geo_long, category_id, cost_center_id, project, approver_name, project_id, company_id, department_id) VALUES 
 (1, 48, '500.00', '500.00', 'Comida para 4 personas en el inventario', '2026-03-13 06:00:00', 'Pagado', '{}', 'uploads/expenses/1773373490696-805424097.png', NULL, NULL, 45, '2026-03-13 03:44:50', '2026-03-13 03:58:18', NULL, 'RFC102938', '10293', '19.26103040', '-99.46726400', 2, 1, NULL, 'Carlos Vega Cabanas', 1, 1, 2),
 (2, 49, '300.00', '300.00', 'Gasto por comprobar', '2026-03-13 06:00:00', 'Pagado', '{}', 'uploads/expenses/1773375086655-992976030.png', NULL, NULL, 45, '2026-03-13 04:11:26', '2026-03-13 04:20:19', NULL, 'RFC09990', 'A1234', '19.26103040', '-99.46726400', 4, 3, NULL, 'Carlos Vega Cabanas', 2, 4, 1),
 (3, 49, '300.00', '300.00', 'Gasto comprobado', '2026-03-13 06:00:00', 'Pagado', '{}', 'uploads/expenses/1773375741938-510597908.png', NULL, NULL, 45, '2026-03-13 04:22:21', '2026-03-13 04:35:06', 1, 'ASIQ87889', 'AS0991', '19.26103040', '-99.46726400', 3, 2, NULL, 'Carlos Vega Cabanas', 3, 3, 3),
-(4, 49, '200.00', '200.00', 'gasto comprobado', '2026-03-13 06:00:00', 'Pagado', '{}', 'uploads/expenses/1773376724509-471794250.png', NULL, NULL, 45, '2026-03-13 04:38:44', '2026-03-13 04:40:29', 1, 'RFCD87677DS8', 'A18273', '19.26103040', '-99.46726400', 1, 2, NULL, 'Carlos Vega Cabanas', 3, 3, 1);
+(4, 49, '200.00', '200.00', 'gasto comprobado', '2026-03-13 06:00:00', 'Pagado', '{}', 'uploads/expenses/1773376724509-471794250.png', NULL, NULL, 45, '2026-03-13 04:38:44', '2026-03-13 04:40:29', 1, 'RFCD87677DS8', 'A18273', '19.26103040', '-99.46726400', 1, 2, NULL, 'Carlos Vega Cabanas', 3, 3, 1),
+(5, 50, '500.00', '500.00', 'GASTOS DE VIATICOS', '2026-04-07 06:00:00', 'Pagado', '{}', 'uploads/expenses/1775591686112-653048898.png', NULL, NULL, 45, '2026-04-07 19:54:46', '2026-04-07 19:59:53', 2, NULL, NULL, '19.27147000', '-99.47342100', 1, 2, NULL, 'Carlos Vega Cabanas', 1, 2, 3);
 
 -- TABLE: notification_templates --
+DROP TABLE IF EXISTS notification_templates;
 CREATE TABLE `notification_templates` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `event_name` varchar(50) NOT NULL,
@@ -233,6 +246,7 @@ CREATE TABLE `notification_templates` (
 -- No data found in notification_templates.
 
 -- TABLE: projects --
+DROP TABLE IF EXISTS projects;
 CREATE TABLE `projects` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -249,6 +263,7 @@ INSERT INTO projects (id, name, description, created_at, active) VALUES
 (3, 'Proyecto 3', 'Proyecto 3', '2026-03-10 15:42:57', 1);
 
 -- TABLE: push_subscriptions --
+DROP TABLE IF EXISTS push_subscriptions;
 CREATE TABLE `push_subscriptions` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -263,6 +278,7 @@ CREATE TABLE `push_subscriptions` (
 -- No data found in push_subscriptions.
 
 -- TABLE: reconciliations --
+DROP TABLE IF EXISTS reconciliations;
 CREATE TABLE `reconciliations` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
@@ -277,10 +293,13 @@ CREATE TABLE `reconciliations` (
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `reconciliations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
--- No data found in reconciliations.
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+TRUNCATE TABLE reconciliations;
+INSERT INTO reconciliations (id, user_id, date, total_system, total_physical, difference, denominations, status, notes, created_at) VALUES 
+(1, 1, '2026-04-07 19:38:09', '8700.00', '8700.00', '0.00', '{"20":0,"50":0,"100":1,"200":3,"500":16,"coins":0}', 'Cerrado', 'revision con Brenda', '2026-04-07 19:38:09');
 
 -- TABLE: roles --
+DROP TABLE IF EXISTS roles;
 CREATE TABLE `roles` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(50) NOT NULL,
@@ -301,6 +320,7 @@ INSERT INTO roles (id, name, description, active, created_at) VALUES
 (7, 'Director', 'Rol de Direccion para Aprobar los pagos', 1, '2026-02-25 19:01:33');
 
 -- TABLE: system_logs --
+DROP TABLE IF EXISTS system_logs;
 CREATE TABLE `system_logs` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) DEFAULT NULL,
@@ -315,15 +335,17 @@ CREATE TABLE `system_logs` (
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
   CONSTRAINT `system_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 TRUNCATE TABLE system_logs;
 INSERT INTO system_logs (id, user_id, action, entity, entity_id, old_value, new_value, ip_address, user_agent, created_at) VALUES 
 (1, 48, 'CREATE', 'Expense', 1, NULL, '{"user_id":"48","amount":"500","description":"Comida para 4 personas en el inventario","date":"2026-03-13","rfc":"RFC102938","folio":"10293","category_id":"2","cost_center_id":"1","project_id":"1","company_id":"1","department_id":"2","geo_lat":"19.2610304","geo_long":"-99.467264"}', NULL, NULL, '2026-03-13 03:44:50'),
 (2, 49, 'CREATE', 'Expense', 2, NULL, '{"user_id":"49","amount":"300","description":"Gasto por comprobar","date":"2026-03-13","rfc":"RFC09990","folio":"A1234","category_id":"4","cost_center_id":"3","project_id":"2","company_id":"4","department_id":"1","geo_lat":"19.2610304","geo_long":"-99.467264"}', NULL, NULL, '2026-03-13 04:11:26'),
 (3, 49, 'CREATE', 'Expense', 3, NULL, '{"user_id":"49","amount":"300","description":"Gasto comprobado","date":"2026-03-13","rfc":"ASIQ87889","folio":"AS0991","category_id":"3","cost_center_id":"2","advance_id":"1","project_id":"3","company_id":"3","department_id":"3","geo_lat":"19.2610304","geo_long":"-99.467264"}', NULL, NULL, '2026-03-13 04:22:21'),
-(4, 49, 'CREATE', 'Expense', 4, NULL, '{"user_id":"49","amount":"200","description":"gasto comprobado","date":"2026-03-13","rfc":"RFCD87677DS8","folio":"A18273","category_id":"1","cost_center_id":"2","advance_id":"1","project_id":"3","company_id":"3","department_id":"1","geo_lat":"19.2610304","geo_long":"-99.467264"}', NULL, NULL, '2026-03-13 04:38:44');
+(4, 49, 'CREATE', 'Expense', 4, NULL, '{"user_id":"49","amount":"200","description":"gasto comprobado","date":"2026-03-13","rfc":"RFCD87677DS8","folio":"A18273","category_id":"1","cost_center_id":"2","advance_id":"1","project_id":"3","company_id":"3","department_id":"1","geo_lat":"19.2610304","geo_long":"-99.467264"}', NULL, NULL, '2026-03-13 04:38:44'),
+(5, 50, 'CREATE', 'Expense', 5, NULL, '{"user_id":"50","amount":"500","description":"GASTOS DE VIATICOS","date":"2026-04-07","rfc":"","folio":"","category_id":"1","cost_center_id":"2","advance_id":"2","project_id":"1","company_id":"2","department_id":"3","return_amount":"","geo_lat":"19.27147","geo_long":"-99.473421"}', NULL, NULL, '2026-04-07 19:54:46');
 
 -- TABLE: system_settings --
+DROP TABLE IF EXISTS system_settings;
 CREATE TABLE `system_settings` (
   `setting_key` varchar(50) NOT NULL,
   `setting_value` text DEFAULT NULL,
@@ -340,6 +362,7 @@ INSERT INTO system_settings (setting_key, setting_value, is_encrypted, updated_a
 ('smtp_user', '', 0, '2026-02-28 14:16:07');
 
 -- TABLE: users --
+DROP TABLE IF EXISTS users;
 CREATE TABLE `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) NOT NULL,

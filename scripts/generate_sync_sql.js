@@ -18,6 +18,7 @@ async function generateFullDump() {
 
             // Get Create Table info
             const [createTable] = await db.query(`SHOW CREATE TABLE ${table}`);
+            sqlOutput += `DROP TABLE IF EXISTS ${table};\n`;
             sqlOutput += `${createTable[0]['Create Table']};\n`;
 
             // Get data
