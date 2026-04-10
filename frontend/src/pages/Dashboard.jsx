@@ -255,7 +255,7 @@ const Dashboard = () => {
                                     <Layers size={20} className="text-white" />
                                 </div>
                                 <div>
-                                    <p className="text-emerald-100 font-semibold text-xs uppercase tracking-widest">Fondo Global</p>
+                                    <p className="text-emerald-100 font-semibold text-xs uppercase tracking-widest">Por comprobar</p>
                                     <p className="font-extrabold text-xl leading-none mt-0.5">{formatCurrency(balanceData?.global_unproven_balance || 0)}</p>
                                 </div>
                             </div>

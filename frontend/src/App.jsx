@@ -52,7 +52,7 @@ function App() {
 
   return (
     <SettingsProvider>
-      <Router basename="/cajachica">
+      <Router basename="/">
         <Routes>
           <Route path="/login" element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/" />} />
 
