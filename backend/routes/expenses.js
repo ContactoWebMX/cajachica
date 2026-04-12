@@ -135,16 +135,24 @@ router.post('/', upload.single('file'), async (req, res) => {
         }
     }
 
-    // 2. Deduct from Advance Logic (Strict check if advance_id provided)
+    // 2. Inheritance & Deduct from Advance Logic
     if (advance_id) {
         try {
             const [advance] = await db.execute(
-                'SELECT id FROM advances WHERE id = ? AND user_id = ? AND status IN ("Aprobado", "Comprobado", "Pendiente", "Pagado")', // Allow comprobado/pendiente just in case
+                'SELECT project_id, category_id, company_id, cost_center_id, department_id FROM advances WHERE id = ? AND user_id = ? AND status IN ("Aprobado", "Comprobado", "Pendiente", "Pagado")',
                 [advance_id, user_id]
             );
             if (advance.length === 0) {
                 return res.status(400).json({ error: 'Invalid or inactive advance selected' });
             }
+            // OVERRIDE classification with Advance data to ensure consistency
+            const adv = advance[0];
+            project_id = adv.project_id || project_id;
+            category_id = adv.category_id || category_id;
+            company_id = adv.company_id || company_id;
+            cost_center_id = adv.cost_center_id || cost_center_id;
+            department_id = adv.department_id || department_id;
+
         } catch (error) {
             console.error('Advance Validation Error:', error);
             return res.status(500).json({ error: 'Database error during advance validation' });
@@ -155,8 +163,12 @@ router.post('/', upload.single('file'), async (req, res) => {
 
     // 3. Create Expense
     try {
-        // Ensure status fits ENUM
-        const expenseStatus = status || 'Pendiente';
+        // OPTIMIZATION: If expense is linked to an advance, it's pre-authorized by the initial request.
+        // It goes directly to 'Aprobado Director' so it appears on the Cashier's task list immediately.
+        let expenseStatus = status || 'Pendiente';
+        if (advance_id) {
+            expenseStatus = 'Aprobado Director';
+        }
 
         const [result] = await db.execute(
             `INSERT INTO expenses 
@@ -205,27 +217,34 @@ router.post('/', upload.single('file'), async (req, res) => {
                 const requester = users[0];
                 let recipientEmail = requester.manager_email;
 
-                // If no manager, notify Admins
+                // LOGIC CHANGE: If auto-approved (advance_id present), notify Admins/Cashiers directly
+                // Skip manager as they already authorized the initial advance.
+                if (advance_id) {
+                    recipientEmail = null; // Force admin/cashier notification
+                }
+
+                // If no manager (or auto-approved), notify Admins/Cashiers
                 if (!recipientEmail) {
                     const [admins] = await db.query(`
                         SELECT u.email 
                         FROM users u 
                         JOIN roles r ON u.role_id = r.id 
-                        WHERE r.name = 'Admin' AND u.active = 1
+                        WHERE r.name IN ('Admin', 'Cajero') AND u.active = 1
                     `);
                     if (admins.length > 0) {
-                        recipientEmail = admins.map(a => a.email).join(','); // Send to all admins
+                        recipientEmail = admins.map(a => a.email).join(',');
                     }
                 }
 
                 if (recipientEmail) {
                     const { sendNewTransactionNotification } = require('../services/emailService');
-                    // We assume localhost:5173 for link, or read from env
-                    const link = 'http://localhost:5173/approvals';
+                    const link = advance_id ? 'http://localhost:5173/transactions' : 'http://localhost:5173/approvals';
+                    const typeLabel = advance_id ? 'Comprobación de Anticipo' : 'Gasto Directo';
+
                     sendNewTransactionNotification(
                         recipientEmail,
                         requester.name,
-                        'Gasto',
+                        typeLabel,
                         parsedAmount,
                         description,
                         link
@@ -307,7 +326,13 @@ router.put('/:id', upload.single('file'), async (req, res) => {
         if (category_id) { updates.push('category_id = ?'); params.push(category_id); }
         if (cost_center_id) { updates.push('cost_center_id = ?'); params.push(cost_center_id); }
         if (project_id) { updates.push('project_id = ?'); params.push(project_id); }
-        if (advance_id) { updates.push('advance_id = ?'); params.push(advance_id); }
+        if (advance_id) {
+            updates.push('advance_id = ?');
+            params.push(advance_id);
+            // Also auto-approve if linked during edit
+            updates.push('status = ?');
+            params.push('Aprobado Director');
+        }
         if (company_id) { updates.push('company_id = ?'); params.push(company_id); }
         if (department_id) { updates.push('department_id = ?'); params.push(department_id); }
 

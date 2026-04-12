@@ -272,11 +272,13 @@ router.put('/:id/approve', async (req, res) => {
                 return res.status(400).json({ error: 'Estado actual no permite esta aprobación.' });
             }
         } else if (status === 'Pagado') {
-            // Ensure it was Aprobado first
+            // Ensure it was Aprobado first (any approval level)
             const [advanceRows] = await db.query('SELECT status FROM advances WHERE id = ?', [id]);
             const currentStatus = advanceRows.length > 0 ? advanceRows[0].status : 'Pendiente';
-            if (currentStatus !== 'Aprobado Director') {
-                return res.status(400).json({ error: 'Debe estar Aprobado por el Director antes del pago.' });
+            const possibleApprovedStates = ['Aprobado', 'Aprobado Jefe', 'Aprobado Director'];
+
+            if (!possibleApprovedStates.includes(currentStatus)) {
+                return res.status(400).json({ error: 'La solicitud debe estar aprobada antes de procesar el pago.' });
             }
             newStatus = 'Pagado';
         }
@@ -288,10 +290,10 @@ router.put('/:id/approve', async (req, res) => {
             if (mgrData.length > 0) approverName = mgrData[0].name;
         }
 
-        // Update status, approved amount, action date, notes, and rejection reason, and approver_name
-
-        let queryStr = 'UPDATE advances SET status = ?, amount_approved = ?, action_date = NOW(), notes = ?, rejection_reason = ?';
-        let queryParams = [newStatus, amount_approved || 0, notes || '', req.body.rejection_reason || null];
+        // Update status, approved amount, action date, and rejection reason, and approver_name
+        // Optimization: We NO LONGER update 'notes' here to preserve the original requester's justification.
+        let queryStr = 'UPDATE advances SET status = ?, amount_approved = ?, action_date = NOW(), rejection_reason = ?';
+        let queryParams = [newStatus, amount_approved || 0, req.body.rejection_reason || null];
 
         if (approverName) {
             queryStr += ', approver_name = ?';

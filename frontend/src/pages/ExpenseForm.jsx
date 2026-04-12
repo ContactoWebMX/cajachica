@@ -45,6 +45,23 @@ const ExpenseForm = () => {
         department_id: ''
     });
 
+    // AUTO-FILL classification from selected Advance
+    useEffect(() => {
+        if (formData.advance_id) {
+            const adv = activeAdvances.find(a => Number(a.id) === Number(formData.advance_id));
+            if (adv) {
+                setFormData(prev => ({
+                    ...prev,
+                    project_id: adv.project_id || prev.project_id,
+                    company_id: adv.company_id || prev.company_id,
+                    category_id: adv.category_id || prev.category_id,
+                    cost_center_id: adv.cost_center_id || prev.cost_center_id,
+                    department_id: adv.department_id || prev.department_id
+                }));
+            }
+        }
+    }, [formData.advance_id, activeAdvances]);
+
     useEffect(() => {
         fetchCatalogs();
         if (!isEditing) {
@@ -120,7 +137,6 @@ const ExpenseForm = () => {
         try {
             const res = await api.get('/users');
             setUsers(res.data);
-            if (userRole === 'Admin' && !selectedUserId) setSelectedUserId(res.data[0]?.id);
         } catch (error) { console.error(error); }
     };
 
@@ -257,30 +273,8 @@ const ExpenseForm = () => {
         }
     };
 
-    // Verificar rol de administrador
-    const canSimulate = userRole === 'Admin';
-
     return (
         <div className="w-full mx-auto bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-
-            {/* Selector de Usuario para Demo - Solo para Admins */}
-            {canSimulate && (
-                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <label className="block text-sm font-bold text-yellow-800 mb-1">Simular Usuario (Demo):</label>
-                    <select
-                        value={selectedUserId}
-                        onChange={e => setSelectedUserId(Number(e.target.value))}
-                        className="w-full border-yellow-300 rounded p-2 text-sm"
-                    >
-                        {users.map(u => (
-                            <option key={u.id} value={u.id}>{u.name} ({u.role || 'Sin Rol'})</option>
-                        ))}
-                    </select>
-                    <p className="text-xs text-yellow-700 mt-1">
-                        Selecciona un usuario para enviar un gasto en su nombre.
-                    </p>
-                </div>
-            )}
 
             <div className="mb-8 p-6 bg-gray-50 rounded-xl border border-dashed border-gray-300 text-center">
                 {preview ? (
@@ -295,17 +289,24 @@ const ExpenseForm = () => {
                         </button>
                     </div>
                 ) : (
-                    <div className="space-y-2">
-                        <div className="mx-auto h-12 w-12 text-gray-400">
-                            <Camera size={48} />
-                        </div>
-                        <div className="text-sm text-gray-600">
-                            <label className="relative cursor-pointer bg-white rounded-md font-medium text-accent hover:text-accent-dark">
-                                <span>Sube una foto</span>
-                                <input type="file" className="sr-only" accept="image/*" onChange={handleFileChange} />
-                            </label>
-                            <p className="pl-1">o arrastra y suelta</p>
-                        </div>
+                    <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
+                        {/* Botón para abrir la cámara web/celular */}
+                        <label className="cursor-pointer flex flex-col items-center justify-center w-48 h-32 bg-white border-2 border-dashed border-gray-300 rounded-xl hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm">
+                            <Camera size={32} className="mb-2 text-gray-400 group-hover:text-blue-500" />
+                            <span className="text-sm font-bold text-gray-700">Tomar Foto</span>
+                            <span className="text-xs text-gray-400 mt-1">Usar cámara</span>
+                            <input type="file" className="sr-only" accept="image/*" capture="environment" onChange={handleFileChange} />
+                        </label>
+
+                        <span className="text-gray-400 text-sm font-medium hidden sm:block">O</span>
+
+                        {/* Botón para abrir la galería o gestor de archivos */}
+                        <label className="cursor-pointer flex flex-col items-center justify-center w-48 h-32 bg-white border-2 border-dashed border-gray-300 rounded-xl hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 transition-all shadow-sm">
+                            <Upload size={32} className="mb-2 text-gray-400 group-hover:text-blue-500" />
+                            <span className="text-sm font-bold text-gray-700">Subir Archivo</span>
+                            <span className="text-xs text-gray-400 mt-1">Galería o PDF</span>
+                            <input type="file" className="sr-only" accept="image/*,.pdf" onChange={handleFileChange} />
+                        </label>
                     </div>
                 )}
 
@@ -370,8 +371,9 @@ const ExpenseForm = () => {
                             <label className="block text-sm font-medium text-gray-700">Empresa <span className="text-red-500">*</span></label>
                             <select
                                 value={formData.company_id}
+                                disabled={!!formData.advance_id}
                                 onChange={e => setFormData({ ...formData, company_id: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border"
+                                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border ${formData.advance_id ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
                             >
                                 <option value="">Seleccionar empresa...</option>
                                 {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -383,8 +385,9 @@ const ExpenseForm = () => {
                             <label className="block text-sm font-medium text-gray-700">Proyecto <span className="text-red-500">*</span></label>
                             <select
                                 value={formData.project_id || ''}
+                                disabled={!!formData.advance_id}
                                 onChange={e => setFormData({ ...formData, project_id: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border"
+                                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border ${formData.advance_id ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
                             >
                                 <option value="">Seleccionar proyecto...</option>
                                 {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -396,8 +399,9 @@ const ExpenseForm = () => {
                             <label className="block text-sm font-medium text-gray-700">Categoría <span className="text-red-500">*</span></label>
                             <select
                                 value={formData.category_id}
+                                disabled={!!formData.advance_id}
                                 onChange={e => setFormData({ ...formData, category_id: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border"
+                                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border ${formData.advance_id ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
                             >
                                 <option value="">Seleccionar categoría...</option>
                                 {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
@@ -409,8 +413,9 @@ const ExpenseForm = () => {
                             <label className="block text-sm font-medium text-gray-700">Centro de Costos <span className="text-red-500">*</span></label>
                             <select
                                 value={formData.cost_center_id}
+                                disabled={!!formData.advance_id}
                                 onChange={e => setFormData({ ...formData, cost_center_id: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border"
+                                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border ${formData.advance_id ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
                             >
                                 <option value="">Seleccionar centro de costos...</option>
                                 {costCenters.map(cc => <option key={cc.id} value={cc.id}>{cc.name} ({cc.code})</option>)}
@@ -422,8 +427,9 @@ const ExpenseForm = () => {
                             <label className="block text-sm font-medium text-gray-700">Departamento <span className="text-red-500">*</span></label>
                             <select
                                 value={formData.department_id}
+                                disabled={!!formData.advance_id}
                                 onChange={e => setFormData({ ...formData, department_id: e.target.value })}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border"
+                                className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-accent focus:ring-accent sm:text-sm h-10 px-3 border ${formData.advance_id ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
                             >
                                 <option value="">Seleccionar departamento...</option>
                                 {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}

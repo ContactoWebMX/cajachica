@@ -146,7 +146,6 @@ const ApprovalDashboard = () => {
             await api.put(`/advances/${advance.id}/approve`, {
                 status: actionToSend,
                 amount_approved: action === 'approve' ? (amount || advance.amount_requested) : 0,
-                notes: action === 'approve' ? 'Aprobado/Pagado desde Dashboard' : 'Rechazado',
                 rejection_reason: reason,
                 manager_id: MANAGER_ID
             });
@@ -264,26 +263,38 @@ const ApprovalDashboard = () => {
                 </div>
             )}
 
-            {/* Tabs Navigation */}
+            {/* Tabs Navigation con Badges (UI/UX Mejorada) */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
                 <div className="flex border-b border-gray-100">
                     <button
-                        className={`flex-1 p-4 text-center font-medium transition-colors ${activeTab === 'expenses' ? 'text-primary border-b-2 border-primary bg-blue-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex-1 p-4 flex items-center justify-center gap-2 font-medium transition-all ${activeTab === 'expenses' ? 'text-primary border-b-2 border-primary bg-blue-50' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}
                         onClick={() => setActiveTab('expenses')}
                     >
-                        Gastos ({filteredExpenses.length})
+                        <FileText size={18} className={activeTab === 'expenses' ? 'text-primary' : 'text-gray-400'} />
+                        <span className="hidden sm:inline">Gastos</span>
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm ${filteredExpenses.length > 0 ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            {filteredExpenses.length}
+                        </span>
                     </button>
                     <button
-                        className={`flex-1 p-4 text-center font-medium transition-colors ${activeTab === 'advances' ? 'text-primary border-b-2 border-primary bg-blue-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex-1 p-4 flex items-center justify-center gap-2 font-medium transition-all ${activeTab === 'advances' ? 'text-primary border-b-2 border-primary bg-blue-50' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}
                         onClick={() => setActiveTab('advances')}
                     >
-                        Anticipos ({filteredAdvances.filter(a => a.type !== 'Reembolso').length})
+                        <DollarSign size={18} className={activeTab === 'advances' ? 'text-primary' : 'text-gray-400'} />
+                        <span className="hidden sm:inline">Anticipos</span>
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm ${filteredAdvances.filter(a => a.type !== 'Reembolso').length > 0 ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            {filteredAdvances.filter(a => a.type !== 'Reembolso').length}
+                        </span>
                     </button>
                     <button
-                        className={`flex-1 p-4 text-center font-medium transition-colors ${activeTab === 'reimbursements' ? 'text-primary border-b-2 border-primary bg-blue-50' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex-1 p-4 flex items-center justify-center gap-2 font-medium transition-all ${activeTab === 'reimbursements' ? 'text-primary border-b-2 border-primary bg-blue-50' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'}`}
                         onClick={() => setActiveTab('reimbursements')}
                     >
-                        Reembolsos ({filteredAdvances.filter(a => a.type === 'Reembolso').length})
+                        <DollarSign size={18} className={activeTab === 'reimbursements' ? 'text-primary' : 'text-gray-400'} />
+                        <span className="hidden sm:inline">Reembolsos</span>
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm ${filteredAdvances.filter(a => a.type === 'Reembolso').length > 0 ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
+                            {filteredAdvances.filter(a => a.type === 'Reembolso').length}
+                        </span>
                     </button>
                 </div>
             </div>

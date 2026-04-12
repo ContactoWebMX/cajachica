@@ -20,7 +20,8 @@ app.use((req, res, next) => {
     const origin = req.headers.origin;
     const allowedOrigins = [
         'https://contactoweb.mx',
-        'https://caja.contactoweb.mx'
+        'https://caja.contactoweb.mx',
+        'http://localhost:5173'
     ];
 
     if (allowedOrigins.includes(origin)) {
