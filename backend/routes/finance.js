@@ -79,48 +79,58 @@ const calculateSystemBalance = async (userId) => {
 
 // GET /api/finance/stats
 router.get('/stats', async (req, res) => {
-    const userId = req.query.user_id; // Or from session if middleware used
-    if (!userId) return res.status(400).json({ error: 'User ID required' });
+    const { user_id, start_date, end_date } = req.query;
+    if (!user_id) return res.status(400).json({ error: 'User ID required' });
 
     try {
-        // Also get Global Cash Balance (Replenishments - Outflows)
-        // 1. Total Replenishments
-        const [inflows] = await db.query('SELECT COALESCE(SUM(amount), 0) as total FROM cash_flows WHERE type = "ingreso"');
-        const totalInflows = parseFloat(inflows[0].total);
+        // Global Balance (Absolute, not period-bound)
+        const [cashRes] = await db.query('SELECT COALESCE(SUM(amount * (CASE WHEN type="ingreso" THEN 1 ELSE -1 END)), 0) as balance FROM cash_flows');
+        const globalBalance = parseFloat(cashRes[0].balance);
 
-        // 2. Total Outflows (Approved Advances + Approved Expenses NOT reimbursed)
-        // Cash Out = All Advances net + Direct Expenses paid from caja.
-        const [advanceOut] = await db.query('SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE status IN ("Pagado", "Comprobado")');
-        const [directExpenseOut] = await db.query('SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE status = "Pagado" AND advance_id IS NULL');
-        const totalOutflows = parseFloat(advanceOut[0].total) + parseFloat(directExpenseOut[0].total);
+        // --- Period Bound Metrics ---
+        let dateFilter = '';
+        const params = [];
+        if (start_date && end_date) {
+            dateFilter = ' AND date BETWEEN ? AND ?';
+            params.push(`${start_date} 00:00:00`, `${end_date} 23:59:59`);
+        }
 
-        const globalBalance = totalInflows - totalOutflows;
+        // 1. Total Replenishments (In Period)
+        const [replenishRes] = await db.query(
+            `SELECT COALESCE(SUM(amount), 0) as total FROM cash_flows WHERE type = 'ingreso' ${dateFilter}`,
+            params
+        );
+        const period_replenishments = parseFloat(replenishRes[0].total);
 
-        // Global Advances (Adelanto and Devoluciones net)
+        // 2. Global Advances (In Period)
         const [globalAdvancesRes] = await db.query(
-            `SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE type IN ('Adelanto', 'Devolucion') AND status IN ('Pagado', 'Comprobado')`
+            `SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE type IN ('Adelanto', 'Devolucion') AND status IN ('Pagado', 'Comprobado') ${dateFilter.replace('date', 'date_approved')}`,
+            params
         );
         const global_total_advances = parseFloat(globalAdvancesRes[0].total);
 
-        // Global Proven Expenses
+        // 3. Global Proven Expenses (In Period)
         const [globalExpensesRes] = await db.query(
-            `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE status IN ('Aprobado', 'Pagado', 'Comprobado')`
+            `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE status IN ('Aprobado', 'Pagado', 'Comprobado') ${dateFilter}`,
+            params
         );
         const global_total_proven_expenses = parseFloat(globalExpensesRes[0].total);
 
-        // Global Reimbursements
+        // 4. Global Reimbursements (In Period)
         const [globalReimbRes] = await db.query(
-            `SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE type = 'Reembolso' AND status IN ('Pagado', 'Comprobado')`
+            `SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE type = 'Reembolso' AND status IN ('Pagado', 'Comprobado') ${dateFilter.replace('date', 'date_approved')}`,
+            params
         );
         const global_total_reimbursements = parseFloat(globalReimbRes[0].total);
 
-        // Global Direct Paid Expenses
-        const [globalDirectRes] = await db.query(
-            `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE status = 'Pagado' AND advance_id IS NULL`
+        // 5. Total Outflows (Cash leaving the box in Period)
+        const [outflowRes] = await db.query(
+            `SELECT COALESCE(SUM(amount), 0) as total FROM cash_flows WHERE type != 'ingreso' ${dateFilter}`,
+            params
         );
-        const global_total_direct = parseFloat(globalDirectRes[0].total);
+        const period_total_outflows = parseFloat(outflowRes[0].total);
 
-        // PER-ADVANCE AGGREGATION to prevent cross-cancelation between trips or employees
+        // --- Aggregated Balances (Always Global) ---
         const [advanceBalances] = await db.query(`
             SELECT 
                 a.id, 
@@ -141,19 +151,16 @@ router.get('/stats', async (req, res) => {
             else if (bal < 0) gross_employee_debt += Math.abs(bal);
         });
 
-        // Add ONLY pending direct expenses definitively approved by the Director to the debt pool
         const [directRes] = await db.query(`SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE advance_id IS NULL AND status = 'Aprobado Director'`);
         gross_employee_debt += parseFloat(directRes[0].total);
 
-        // Subtract ALL formal Reimbursements from debt pool (cash given back to employees)
         const [reimbRes] = await db.query(`SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE type = 'Reembolso' AND status IN ('Pagado', 'Comprobado')`);
-        const totalReimbursements = parseFloat(reimbRes[0].total);
-        gross_employee_debt -= totalReimbursements;
+        gross_employee_debt -= parseFloat(reimbRes[0].total);
 
         const global_unproven_balance = gross_unproven_balance;
         const global_employee_debt = gross_employee_debt > 0 ? gross_employee_debt : 0;
 
-        const stats = await calculateSystemBalance(userId);
+        const stats = await calculateSystemBalance(user_id);
         res.json({
             ...stats,
             global_balance: globalBalance,
@@ -161,7 +168,9 @@ router.get('/stats', async (req, res) => {
             global_total_proven_expenses,
             global_total_reimbursements,
             global_unproven_balance,
-            global_employee_debt
+            global_employee_debt,
+            period_replenishments,
+            period_total_outflows
         });
     } catch (error) {
         console.error('Error fetching finance stats:', error);
@@ -285,17 +294,33 @@ router.post('/pay-debt', async (req, res) => {
 
 // POST /api/finance/replenish
 router.post('/replenish', async (req, res) => {
-    console.log('POST /replenish payload:', req.body);
-    const { amount, description, user_id } = req.body;
+    const {
+        amount,
+        description,
+        user_id,
+        company_id,
+        project_id,
+        department_id,
+        category_id,
+        cost_center_id
+    } = req.body;
 
     if (!amount || user_id === undefined || user_id === null) {
         return res.status(400).json({ error: 'Amount and User ID required' });
     }
 
     try {
+        const cid = (company_id && company_id !== '') ? Number(company_id) : null;
+        const pid = (project_id && project_id !== '') ? Number(project_id) : null;
+        const did = (department_id && department_id !== '') ? Number(department_id) : null;
+        const catid = (category_id && category_id !== '') ? Number(category_id) : null;
+        const ccid = (cost_center_id && cost_center_id !== '') ? Number(cost_center_id) : null;
+
+        console.log('Final DB values:', { cid, pid, did, catid, ccid });
+
         await db.execute(
-            'INSERT INTO cash_flows (type, amount, description, user_id, date) VALUES (?, ?, ?, ?, NOW())',
-            ['ingreso', amount, description || 'Reposición de Caja', user_id]
+            'INSERT INTO cash_flows (type, amount, description, user_id, date, company_id, project_id, department_id, category_id, cost_center_id) VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?)',
+            ['ingreso', amount, description || 'Reposición de Caja', user_id, cid, pid, did, catid, ccid]
         );
         res.status(201).json({ message: 'Cash replenished successfully' });
     } catch (error) {
@@ -306,15 +331,36 @@ router.post('/replenish', async (req, res) => {
 
 // GET /api/finance/replenishments
 router.get('/replenishments', async (req, res) => {
+    const { start_date, end_date } = req.query;
     try {
-        const [rows] = await db.query(
-            `SELECT cf.*, u.name as user_name 
+        let query = `
+            SELECT 
+                cf.*, 
+                u.name as user_name,
+                c.name as company_name,
+                p.name as project_name,
+                d.name as department_name,
+                ec.name as category_name,
+                cc.name as cost_center_name
              FROM cash_flows cf
              LEFT JOIN users u ON cf.user_id = u.id
-             WHERE cf.type = 'ingreso' 
-             ORDER BY cf.date DESC 
-             LIMIT 10`
-        );
+             LEFT JOIN companies c ON cf.company_id = c.id
+             LEFT JOIN projects p ON cf.project_id = p.id
+             LEFT JOIN departments d ON cf.department_id = d.id
+             LEFT JOIN expense_categories ec ON cf.category_id = ec.id
+             LEFT JOIN cost_centers cc ON cf.cost_center_id = cc.id
+             WHERE cf.type = 'ingreso'
+        `;
+        const params = [];
+
+        if (start_date && end_date) {
+            query += ' AND cf.date BETWEEN ? AND ?';
+            params.push(`${start_date} 00:00:00`, `${end_date} 23:59:59`);
+        }
+
+        query += ' ORDER BY cf.date DESC LIMIT 100';
+
+        const [rows] = await db.query(query, params);
         res.json(rows);
     } catch (error) {
         console.error('Error fetching replenishments:', error);

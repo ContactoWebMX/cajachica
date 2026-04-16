@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { DollarSign, FileText, Activity, TrendingUp, TrendingDown, Users, Layers, CheckCircle } from 'lucide-react';
+import { DollarSign, FileText, Activity, TrendingUp, TrendingDown, Users, Layers, CheckCircle, ArrowDownLeft, ArrowUpRight, Briefcase } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
 import {
     ResponsiveContainer,
@@ -83,69 +83,7 @@ const Dashboard = () => {
 
     useEffect(() => { setPageTitle('Dashboard'); }, [setPageTitle]);
 
-    useEffect(() => {
-        const fetchAll = async () => {
-            const user = JSON.parse(localStorage.getItem('user'));
-            if (!user) return;
-            setLoading(true);
-
-            try {
-                const params = new URLSearchParams();
-                const isAdmin = ['admin', 'cajero', "director"].includes(user.role?.toLowerCase());
-                const isManager = ['manager', 'gerente'].includes(user.role?.toLowerCase());
-                // Admins/Cajeros see everything; Managers see reports too
-                if (!isAdmin) {
-                    params.append('user_id', user.id);
-                    if (isManager) params.append('include_reports', 'true');
-                }
-                const qs = params.toString();
-
-                const [balRes, expRes, advRes] = await Promise.all([
-                    api.get(`/advances/balance/${user.id}`),
-                    api.get(`/expenses?${qs}`),
-                    api.get(`/advances?${qs}`),
-                ]);
-
-                let bd = balRes.data;
-                // Fetch global stats for all users to show 'Caja Real' and 'Fondo Global' in the Universal Top Bar
-                try {
-                    const stats = await api.get(`/finance/stats?user_id=${user.id}`);
-                    bd = { ...bd, ...stats.data };
-                } catch { /* silent */ }
-
-                let pendingCount = 0;
-                if (['admin', 'cajero', 'director', 'manager', 'gerente'].includes(user.role?.toLowerCase())) {
-                    try {
-                        const roleName = user.role?.toLowerCase();
-                        let status = 'Pendiente';
-                        if (roleName === 'cajero') status = 'Aprobado Director';
-                        else if (['admin', 'gerente', 'director'].includes(roleName)) {
-                            status = (roleName === 'admin') ? 'AdminPending' : 'Aprobado Jefe';
-                        }
-                        const [pExp, pAdv] = await Promise.all([
-                            api.get(`/approvals/pending?manager_id=${user.id}&status=${status}`),
-                            api.get(`/approvals/pending-advances?manager_id=${user.id}&status=${status}`)
-                        ]);
-                        pendingCount = pExp.data.length + pAdv.data.length;
-                    } catch { /* silent */ }
-                }
-                bd = { ...bd, pendingCount };
-
-                setBalanceData(bd);
-                setExpenses(expRes.data);
-                setAdvances(advRes.data);
-            } catch (e) {
-                console.error('Dashboard fetch error:', e);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchAll();
-    }, []);
-
-    /* ── Derived metrics ── */
-    const currentUser = JSON.parse(localStorage.getItem('user'));
-    const isAdmin = ['admin', 'cajero', 'director'].includes(currentUser?.role?.toLowerCase());
+    const user = JSON.parse(localStorage.getItem('user'));
 
     /* Date Filtering Logic */
     const [filterPeriod, setFilterPeriod] = useState('current_month'); // 'current_month', 'last_month', 'ytd', 'all', 'custom'
@@ -169,6 +107,56 @@ const Dashboard = () => {
         }
         return { start: new Date('2000-01-01'), end: new Date('2100-01-01') };
     }, [filterPeriod, customDates]);
+
+    useEffect(() => {
+        const fetchAll = async () => {
+            if (!user?.id) return;
+            setLoading(true);
+            try {
+                const startDateStr = dateBounds.start.toISOString().split('T')[0];
+                const endDateStr = dateBounds.end.toISOString().split('T')[0];
+                const query = `start_date=${startDateStr}&end_date=${endDateStr}`;
+
+                const isAdmin = ['admin', 'cajero', 'director'].includes(user.role?.toLowerCase());
+
+                const [balRes, expRes, advRes, statsRes] = await Promise.all([
+                    api.get(`/advances/balance/${user.id}`),
+                    api.get(`/expenses?${query}${!isAdmin ? `&user_id=${user.id}` : ''}`),
+                    api.get(`/advances?${query}${!isAdmin ? `&user_id=${user.id}` : ''}`),
+                    api.get(`/finance/stats?user_id=${user.id}&${query}`)
+                ]);
+
+                let pendingCount = 0;
+                if (['admin', 'cajero', 'director', 'manager', 'gerente'].includes(user.role?.toLowerCase())) {
+                    try {
+                        const roleName = user.role?.toLowerCase();
+                        let status = 'Pendiente';
+                        if (roleName === 'cajero') status = 'Aprobado Director';
+                        else if (['admin', 'gerente', 'director'].includes(roleName)) {
+                            status = (roleName === 'admin') ? 'AdminPending' : 'Aprobado Jefe';
+                        }
+                        const [pExp, pAdv] = await Promise.all([
+                            api.get(`/approvals/pending?manager_id=${user.id}&status=${status}&${query}`),
+                            api.get(`/approvals/pending-advances?manager_id=${user.id}&status=${status}&${query}`)
+                        ]);
+                        pendingCount = pExp.data.length + pAdv.data.length;
+                    } catch { /* silent */ }
+                }
+
+                setBalanceData({ ...balRes.data, ...statsRes.data, pendingCount });
+                setExpenses(expRes.data);
+                setAdvances(advRes.data);
+            } catch (e) {
+                console.error('Dashboard fetch error:', e);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAll();
+    }, [dateBounds, user?.id]);
+
+    /* ── Derived metrics ── */
+    const isAdmin = ['admin', 'cajero', 'director'].includes(user?.role?.toLowerCase());
 
     const filteredExpenses = useMemo(() => {
         if (filterPeriod === 'all') return expenses;
@@ -430,28 +418,39 @@ const Dashboard = () => {
                 )}
             </div>
 
-            {/* ── Global Executive Summary (Admin Only) ── */}
             {isAdmin && (
                 <div>
-                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Resumen Ejecutivo Global</h2>
+                    <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Resumen Ejecutivo del Periodo</h2>
                     <div className={`grid grid-cols-1 sm:grid-cols-2 ${balanceData?.global_employee_debt > 0 ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-4`}>
-                        <KpiCard label="Anticipos Globales"
-                            value={formatCurrency(balanceData?.global_total_advances || 0)}
-                            icon={Activity} colorClass="bg-indigo-50 text-indigo-700" />
+                        <KpiCard
+                            label="Ingresos de Caja"
+                            value={formatCurrency(balanceData?.period_replenishments || 0)}
+                            icon={ArrowDownLeft}
+                            colorClass="bg-green-50 text-green-700"
+                            subtitle="Total de reposiciones"
+                        />
 
-                        <KpiCard label="Gastos Probados"
+                        <KpiCard
+                            label="Egresos del Periodo"
+                            value={formatCurrency(balanceData?.period_total_outflows || 0)}
+                            icon={ArrowUpRight}
+                            colorClass="bg-red-50 text-red-700"
+                            subtitle="Dinero que ha salido de caja"
+                        />
+
+                        <KpiCard
+                            label="Inversión Operativa"
                             value={formatCurrency(balanceData?.global_total_proven_expenses || 0)}
-                            icon={FileText} colorClass="bg-orange-50 text-orange-700" />
-
-                        <KpiCard label="Reembolsos"
-                            value={formatCurrency(balanceData?.global_total_reimbursements || 0)}
-                            icon={TrendingUp} colorClass="bg-teal-50 text-teal-700" />
+                            icon={Briefcase}
+                            colorClass="bg-indigo-50 text-indigo-700"
+                            subtitle="Gastos ya comprobados"
+                        />
 
                         {(balanceData?.global_employee_debt > 0) && (
                             <KpiCard label="A Favor de Empleados"
                                 value={formatCurrency(balanceData?.global_employee_debt || 0)}
                                 icon={TrendingUp} colorClass="bg-red-600 text-white"
-                                subtitle="Deuda por anticipos excedidos" />
+                                subtitle="Saldos pendientes de reembolsar" />
                         )}
                     </div>
                 </div>
