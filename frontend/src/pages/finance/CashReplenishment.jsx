@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { DollarSign, Save, ChevronDown, ChevronRight, Calendar, X, Info, TrendingUp, PlusCircle } from 'lucide-react';
+import { Save, ChevronDown, ChevronRight, Calendar, X, TrendingUp, PlusCircle } from 'lucide-react';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { useOutletContext } from 'react-router-dom';
 
@@ -20,14 +20,10 @@ const CashReplenishment = () => {
     // Catalogs
     const [companies, setCompanies] = useState([]);
     const [projects, setProjects] = useState([]);
-    const [categories, setCategories] = useState([]);
     const [costCenters, setCostCenters] = useState([]);
-    const [departments, setDepartments] = useState([]);
 
     // Auth & Admin
-    const [users, setUsers] = useState([]);
     const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    const isAdmin = currentUser.role && ['admin', 'administrador', 'manager'].includes(currentUser.role.toLowerCase());
 
     const [formData, setFormData] = useState({
         amount: '',
@@ -35,9 +31,7 @@ const CashReplenishment = () => {
         user_id: '',
         company_id: '',
         project_id: '',
-        category_id: '',
-        cost_center_id: '',
-        department_id: ''
+        cost_center_id: ''
     });
 
     const fetchHistory = async () => {
@@ -67,46 +61,24 @@ const CashReplenishment = () => {
 
     const fetchCatalogs = async () => {
         try {
-            const [comps, projs, cats, ccs, depts] = await Promise.all([
+            const [comps, projs, ccs] = await Promise.all([
                 api.get('/catalogs/companies'),
                 api.get('/catalogs/projects'),
-                api.get('/catalogs/categories'),
-                api.get('/catalogs/cost-centers'),
-                api.get('/catalogs/departments')
+                api.get('/catalogs/cost-centers')
             ]);
             setCompanies(comps.data);
             setProjects(projs.data);
-            setCategories(cats.data);
             setCostCenters(ccs.data);
-            setDepartments(depts.data);
         } catch (error) {
             console.error('Error fetching catalogs:', error);
-        }
-    };
-
-    const fetchUsers = async () => {
-        if (!isAdmin) return;
-        try {
-            const res = await api.get('/users');
-            setUsers(res.data);
-
-            if (res.data.length > 0 && !formData.user_id) {
-                setFormData(prev => ({ ...prev, user_id: res.data[0].id }));
-            }
-        } catch (error) {
-            console.error('Error fetching users:', error);
         }
     };
 
     useEffect(() => {
         setPageTitle('Ingreso de Fondos');
         fetchCatalogs();
-        if (isAdmin) {
-            fetchUsers();
-        } else {
-            setFormData(prev => ({ ...prev, user_id: currentUser.id }));
-        }
-    }, [isAdmin, setPageTitle]);
+        setFormData(prev => ({ ...prev, user_id: currentUser.id }));
+    }, [setPageTitle]);
 
     useEffect(() => {
         fetchHistory();
@@ -114,16 +86,6 @@ const CashReplenishment = () => {
 
     const totalInPeriod = history.reduce((acc, curr) => acc + parseFloat(curr.amount), 0);
     const countInPeriod = history.length;
-
-    // Ensure a default user is selected when users are loaded
-    useEffect(() => {
-        if (isAdmin && users.length > 0) {
-            const isValid = users.find(u => u.id === Number(formData.user_id));
-            if (!formData.user_id || !isValid) {
-                setFormData(prev => ({ ...prev, user_id: users[0].id }));
-            }
-        }
-    }, [users, isAdmin, formData.user_id]);
 
     const handlePreSubmit = (e) => {
         e.preventDefault();
@@ -148,9 +110,7 @@ const CashReplenishment = () => {
                 user_id: formData.user_id,
                 company_id: '',
                 project_id: '',
-                category_id: '',
-                cost_center_id: '',
-                department_id: ''
+                cost_center_id: ''
             });
             fetchHistory();
         } catch (error) {
@@ -186,27 +146,6 @@ const CashReplenishment = () => {
                 </div>
 
                 <form onSubmit={handlePreSubmit} className="space-y-6">
-                    {isAdmin && (
-                        <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-xl mb-6 flex flex-col md:flex-row md:items-center gap-4">
-                            <div className="flex items-center gap-2">
-                                <Info size={16} className="text-yellow-600" />
-                                <label className="text-xs font-bold text-yellow-700 uppercase tracking-widest whitespace-nowrap">
-                                    Registrar a nombre de:
-                                </label>
-                            </div>
-                            <select
-                                value={formData.user_id}
-                                onChange={e => setFormData(prev => ({ ...prev, user_id: Number(e.target.value) }))}
-                                className="w-full md:max-w-xs border-yellow-200 rounded-lg p-2 text-sm bg-white text-gray-800 shadow-sm focus:ring-yellow-500 focus:border-yellow-500"
-                            >
-                                {users.map(u => (
-                                    <option key={u.id} value={u.id}>
-                                        {u.name} ({u.role || 'Sin Rol'})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <div className="space-y-4">
@@ -261,23 +200,6 @@ const CashReplenishment = () => {
                                 <select value={formData.cost_center_id} onChange={e => setFormData(prev => ({ ...prev, cost_center_id: e.target.value }))} className={inputStyle}>
                                     <option value="">Seleccionar centro...</option>
                                     {costCenters.map(cc => <option key={cc.id} value={cc.id}>{cc.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className={labelStyle}>Categoría</label>
-                                <select value={formData.category_id} onChange={e => setFormData(prev => ({ ...prev, category_id: e.target.value }))} className={inputStyle}>
-                                    <option value="">Seleccionar categoría...</option>
-                                    {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className={labelStyle}>Departamento</label>
-                                <select value={formData.department_id} onChange={e => setFormData(prev => ({ ...prev, department_id: e.target.value }))} className={inputStyle}>
-                                    <option value="">Seleccionar departamento...</option>
-                                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                                 </select>
                             </div>
                         </div>
@@ -412,12 +334,10 @@ const CashReplenishment = () => {
                                             <tr className="bg-gray-50/50 animate-in slide-in-from-top-2 duration-300">
                                                 <td className="p-0"></td>
                                                 <td colSpan="4" className="p-6">
-                                                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 border-l-2 border-indigo-200 pl-6 py-2">
+                                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 border-l-2 border-indigo-200 pl-6 py-2">
                                                         <DetailRow label="Empresa" value={item.company_name} />
                                                         <DetailRow label="Proyecto" value={item.project_name} />
                                                         <DetailRow label="Centro de Costos" value={item.cost_center_name} />
-                                                        <DetailRow label="Departamento" value={item.department_name} />
-                                                        <DetailRow label="Categoría" value={item.category_name} />
                                                     </div>
                                                 </td>
                                             </tr>
@@ -468,8 +388,6 @@ const CashReplenishment = () => {
                                     <DetailRow label="Empresa" value={selectedEntry.company_name} />
                                     <DetailRow label="Proyecto" value={selectedEntry.project_name} />
                                     <DetailRow label="Centro de Costos" value={selectedEntry.cost_center_name} />
-                                    <DetailRow label="Departamento" value={selectedEntry.department_name} />
-                                    <DetailRow label="Categoría" value={selectedEntry.category_name} />
                                     <DetailRow label="Usuario" value={selectedEntry.user_name} />
                                 </div>
                             </div>
