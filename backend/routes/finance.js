@@ -104,7 +104,7 @@ router.get('/stats', async (req, res) => {
 
         // 2. Global Advances (In Period)
         const [globalAdvancesRes] = await db.query(
-            `SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE type IN ('Adelanto', 'Devolucion') AND status IN ('Pagado', 'Comprobado') ${dateFilter.replace('date', 'date_approved')}`,
+            `SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE type IN ('Adelanto', 'Devolucion') AND status IN ('Pagado', 'Comprobado') ${dateFilter.replace('date', 'action_date')}`,
             params
         );
         const global_total_advances = parseFloat(globalAdvancesRes[0].total);
@@ -118,7 +118,7 @@ router.get('/stats', async (req, res) => {
 
         // 4. Global Reimbursements (In Period)
         const [globalReimbRes] = await db.query(
-            `SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE type = 'Reembolso' AND status IN ('Pagado', 'Comprobado') ${dateFilter.replace('date', 'date_approved')}`,
+            `SELECT COALESCE(SUM(amount_approved), 0) as total FROM advances WHERE type = 'Reembolso' AND status IN ('Pagado', 'Comprobado') ${dateFilter.replace('date', 'action_date')}`,
             params
         );
         const global_total_reimbursements = parseFloat(globalReimbRes[0].total);
