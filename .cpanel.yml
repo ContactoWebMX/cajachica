@@ -5,7 +5,7 @@ deployment:
     - /bin/mkdir -p $DEPLOYPATH
     - cd frontend && npm install && npm run build
     - /bin/cp -R frontend/dist/* $DEPLOYPATH
-    - export APIDEPLOYPATH=/home/contacto/public_html/cajachica-api
+    - export APIDEPLOYPATH=/home/contacto/induwell-api
     - /bin/mkdir -p $APIDEPLOYPATH
     - cd backend && npm install
     - /bin/cp -R backend/* $APIDEPLOYPATH
