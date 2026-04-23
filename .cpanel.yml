@@ -3,9 +3,7 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/contacto/public_html/cajachica
     - /bin/mkdir -p $DEPLOYPATH
-    - cd frontend && npm install && npm run build
     - /bin/cp -R frontend/dist/* $DEPLOYPATH
     - export APIDEPLOYPATH=/home/contacto/induwell-api
     - /bin/mkdir -p $APIDEPLOYPATH
-    - cd backend && npm install
     - /bin/cp -R backend/* $APIDEPLOYPATH
