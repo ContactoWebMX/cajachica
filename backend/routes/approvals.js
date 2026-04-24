@@ -180,6 +180,32 @@ router.post('/:id/action', async (req, res) => {
                 return res.status(400).json({ error: 'El gasto debe estar Aprobado Director para poder pagarse.' });
             }
             finalAmount = currentAmountApproved || amount;
+
+            // --- REGISTRAR SALIDA DE CAJA ---
+            // Only if it is NOT linked to an advance (direct expense)
+            const [expenseDetails] = await db.query('SELECT * FROM expenses WHERE id = ?', [id]);
+            const exp = expenseDetails[0];
+
+            if (!exp.advance_id) {
+                await db.execute(
+                    `INSERT INTO cash_flows (type, amount, description, user_id, reference_id, company_id, project_id, department_id, category_id, cost_center_id, date) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                    [
+                        'gasto',
+                        finalAmount,
+                        `Pago de Gasto: ${exp.description || ''}`,
+                        manager_id || exp.user_id, // Who processed it
+                        id, // reference_id
+                        exp.company_id,
+                        exp.project_id,
+                        exp.department_id,
+                        exp.category_id,
+                        exp.cost_center_id
+                    ]
+                );
+            }
+            // --------------------------------
+
             newStatus = 'Pagado';
         } else if (action === 'Aprobado') {
             finalAmount = (amount_approved !== undefined && amount_approved !== null) ? amount_approved : amount;

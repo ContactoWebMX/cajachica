@@ -273,19 +273,43 @@ router.put('/:id/approve', async (req, res) => {
             }
         } else if (status === 'Pagado') {
             // Ensure it was Aprobado first (any approval level)
-            const [advanceRows] = await db.query('SELECT status FROM advances WHERE id = ?', [id]);
-            const currentStatus = advanceRows.length > 0 ? advanceRows[0].status : 'Pendiente';
+            const [advanceRows] = await db.query('SELECT * FROM advances WHERE id = ?', [id]);
+            if (advanceRows.length === 0) return res.status(404).json({ error: 'Solicitud no encontrada' });
+
+            const advance = advanceRows[0];
+            const currentStatus = advance.status;
             const possibleApprovedStates = ['Aprobado', 'Aprobado Jefe', 'Aprobado Director'];
 
             if (!possibleApprovedStates.includes(currentStatus)) {
                 return res.status(400).json({ error: 'La solicitud debe estar aprobada antes de procesar el pago.' });
             }
+
+            // --- REGISTRAR SALIDA DE CAJA ---
+            const flowType = advance.type === 'Reembolso' ? 'reembolso' : 'anticipo'; // Use enum values
+            await db.execute(
+                `INSERT INTO cash_flows (type, amount, description, user_id, reference_id, company_id, project_id, department_id, category_id, cost_center_id, date) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [
+                    flowType,
+                    amount_approved || advance.amount_approved,
+                    `Pago de ${advance.type}: ${advance.notes || ''}`,
+                    manager_id || advance.user_id, // Who processed it
+                    id, // reference_id
+                    advance.company_id,
+                    advance.project_id,
+                    advance.department_id,
+                    advance.category_id,
+                    advance.cost_center_id
+                ]
+            );
+            // --------------------------------
+
             newStatus = 'Pagado';
         }
 
         // Fetch approver name if someone is approving it
         let approverName = null;
-        if (manager_id && (newStatus === 'Aprobado Director' || newStatus === 'Aprobado' || newStatus === 'Aprobado Jefe')) {
+        if (manager_id && (newStatus === 'Aprobado Director' || newStatus === 'Aprobado' || newStatus === 'Aprobado Jefe' || newStatus === 'Pagado')) {
             const [mgrData] = await db.query('SELECT name FROM users WHERE id = ?', [manager_id]);
             if (mgrData.length > 0) approverName = mgrData[0].name;
         }
