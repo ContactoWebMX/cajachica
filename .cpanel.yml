@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/contacto/public_html/cajachica
+    - export DEPLOYPATH=/home/contacto/caja-front
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R frontend/dist/* $DEPLOYPATH
     - export APIDEPLOYPATH=/home/contacto/induwell-api
