@@ -77,6 +77,35 @@ const calculateSystemBalance = async (userId) => {
     };
 };
 
+// GET /api/finance/backfill
+router.get('/backfill', async (req, res) => {
+    try {
+        const [advances] = await db.query("SELECT * FROM advances WHERE status IN ('Pagado', 'Comprobado') AND type IN ('Adelanto', 'Devolucion') AND id NOT IN (SELECT reference_id FROM cash_flows WHERE type = 'anticipo' AND reference_id IS NOT NULL)");
+        let insertedAdvances = 0;
+        for (let adv of advances) {
+            await db.execute(
+                'INSERT INTO cash_flows (type, amount, description, user_id, reference_id, date, company_id, project_id, department_id, category_id, cost_center_id) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?)',
+                ['anticipo', adv.amount_approved, `Backfill: Pago de Adelanto: ${adv.notes || ''}`, adv.user_id, adv.id, adv.company_id, adv.project_id, adv.department_id, adv.category_id, adv.cost_center_id]
+            );
+            insertedAdvances++;
+        }
+
+        const [expenses] = await db.query("SELECT * FROM expenses WHERE advance_id IS NULL AND status = 'Pagado' AND id NOT IN (SELECT reference_id FROM cash_flows WHERE type IN ('gasto', 'reembolso') AND reference_id IS NOT NULL)");
+        let insertedExpenses = 0;
+        for (let exp of expenses) {
+            await db.execute(
+                'INSERT INTO cash_flows (type, amount, description, user_id, reference_id, date, company_id, project_id, department_id, category_id, cost_center_id) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?)',
+                ['gasto', exp.amount, `Backfill: Pago de Gasto: ${exp.description || ''}`, exp.user_id, exp.id, exp.company_id, exp.project_id, exp.department_id, exp.category_id, exp.cost_center_id]
+            );
+            insertedExpenses++;
+        }
+        res.json({ message: 'Backfill completado exitosamente', avances_procesados: insertedAdvances, gastos_procesados: insertedExpenses });
+    } catch (e) {
+        console.error('Backfill Error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // GET /api/finance/stats
 router.get('/stats', async (req, res) => {
     const { user_id, start_date, end_date } = req.query;
